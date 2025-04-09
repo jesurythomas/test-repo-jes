@@ -1,35 +1,65 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import { Header } from "./components/Header";
+import { Hero } from "./components/Hero";
+import { Features } from "./components/Features";
+import { Footer } from "./components/Footer";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Simulated authentication actions
+  const handleLogin = async () => {
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setIsLoggedIn(true);
+    alert("Successfully logged in!");
+  };
+
+  const handleLogout = async () => {
+    // Simulate API call
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setIsLoggedIn(false);
+    alert("Successfully logged out!");
+  };
+
+  // Simulated get started action
+  const handleGetStarted = async () => {
+    if (!isLoggedIn) {
+      const shouldLogin = window.confirm("You need to login first. Would you like to login?");
+      if (shouldLogin) {
+        await handleLogin();
+      }
+      return;
+    }
+
+    // Simulate navigation or action
+    alert("Welcome to your dashboard!");
+  };
+
+  // Simulated newsletter subscription
+  const handleSubscribe = async (email: string) => {
+    // Simulate API call
+    await new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // Simulate success/failure based on email format
+        if (email.includes("@")) {
+          resolve(true);
+        } else {
+          reject(new Error("Invalid email"));
+        }
+      }, 1500);
+    });
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="landing-page">
+      <Header isLoggedIn={isLoggedIn} onLogin={handleLogin} onLogout={handleLogout} />
+      <Hero onGetStarted={handleGetStarted} />
+      <Features />
+      <Footer onSubscribe={handleSubscribe} />
+    </div>
+  );
 }
 
-export default App
+export default App;
