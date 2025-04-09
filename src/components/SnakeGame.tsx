@@ -1,27 +1,50 @@
 import { useState, useEffect, useCallback } from "react";
+import { useTheme } from "../context/ThemeContext";
 
 // Bad practice: Global variables
 let intervalId: NodeJS.Timeout;
 let direction = "RIGHT";
 let speed = 100;
 
-// Bad practice: Not using TypeScript properly
+interface GameStats {
+  highScore: number;
+  gamesPlayed: number;
+  averageScore: number;
+}
+
 export const SnakeGame = () => {
-  // Bad practice: Too many useState calls instead of using reducer
+  const { isDarkMode } = useTheme();
   const [snake, setSnake] = useState<any[]>([{ x: 0, y: 0 }]);
   const [food, setFood] = useState<any>({ x: 5, y: 5 });
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   const [gridSize] = useState({ width: 20, height: 20 });
+  const [gameStats, setGameStats] = useState<GameStats>(() => {
+    const saved = localStorage.getItem("snakeGameStats");
+    return saved ? JSON.parse(saved) : { highScore: 0, gamesPlayed: 0, averageScore: 0 };
+  });
 
-  // Bad practice: Recalculating this every render
   const grid = Array(gridSize.height)
     .fill(null)
     .map(() => Array(gridSize.width).fill(null));
 
-  // Bad practice: Not memoizing this function
+  const updateGameStats = useCallback((finalScore: number) => {
+    setGameStats((prev) => {
+      const newStats = {
+        highScore: Math.max(prev.highScore, finalScore),
+        gamesPlayed: prev.gamesPlayed + 1,
+        averageScore: Math.round(
+          (prev.averageScore * prev.gamesPlayed + finalScore) / (prev.gamesPlayed + 1)
+        ),
+      };
+      localStorage.setItem("snakeGameStats", JSON.stringify(newStats));
+      return newStats;
+    });
+  }, []);
+
   const generateFood = () => {
-    // Bad practice: Inefficient random number generation
     let newFood;
     do {
       newFood = {
@@ -30,18 +53,18 @@ export const SnakeGame = () => {
       };
     } while (snake.some((segment) => segment.x === newFood.x && segment.y === newFood.y));
 
-    // Bad practice: Unnecessary state update that could be combined
     setFood(newFood);
-    setScore((prevScore) => prevScore + 1);
+    setScore(
+      (prevScore) => prevScore + (difficulty === "easy" ? 1 : difficulty === "medium" ? 2 : 3)
+    );
   };
 
-  // Bad practice: Complex logic in component
   const moveSnake = useCallback(() => {
-    // Bad practice: Mutating state directly
+    if (isPaused) return;
+
     const newSnake = [...snake];
     const head = { ...newSnake[0] };
 
-    // Bad practice: Switch statement could be an object lookup
     switch (direction) {
       case "UP":
         head.y -= 1;
@@ -57,120 +80,153 @@ export const SnakeGame = () => {
         break;
     }
 
-    // Bad practice: Boundary checking could be more efficient
-    if (
-      head.x < 0 ||
-      head.x >= gridSize.width ||
-      head.y < 0 ||
-      head.y >= gridSize.height ||
-      snake.some((segment) => segment.x === head.x && segment.y === head.y)
-    ) {
-      // Bad practice: Alert in game logic
-      alert(`Game Over! Score: ${score}`);
-      setGameOver(true);
-      clearInterval(intervalId);
-      return;
+    // Wall collision based on difficulty
+    if (difficulty === "hard") {
+      if (
+        head.x < 0 ||
+        head.x >= gridSize.width ||
+        head.y < 0 ||
+        head.y >= gridSize.height ||
+        snake.some((segment) => segment.x === head.x && segment.y === head.y)
+      ) {
+        alert(`Game Over! Score: ${score}`);
+        setGameOver(true);
+        updateGameStats(score);
+        clearInterval(intervalId);
+        return;
+      }
+    } else {
+      // Wrap around walls for easy/medium
+      if (head.x < 0) head.x = gridSize.width - 1;
+      if (head.x >= gridSize.width) head.x = 0;
+      if (head.y < 0) head.y = gridSize.height - 1;
+      if (head.y >= gridSize.height) head.y = 0;
+
+      // Still check self collision
+      if (snake.some((segment) => segment.x === head.x && segment.y === head.y)) {
+        alert(`Game Over! Score: ${score}`);
+        setGameOver(true);
+        updateGameStats(score);
+        clearInterval(intervalId);
+        return;
+      }
     }
 
     newSnake.unshift(head);
 
-    // Bad practice: Inefficient collision detection
     if (head.x === food.x && head.y === food.y) {
       generateFood();
+      // Speed up the snake slightly when eating food
+      speed = Math.max(50, speed - 2);
+      clearInterval(intervalId);
+      intervalId = setInterval(moveSnake, speed);
     } else {
       newSnake.pop();
     }
 
-    // Bad practice: Unnecessary spread operator
     setSnake([...newSnake]);
-  }, [snake, food, score, gridSize.width, gridSize.height]);
+  }, [snake, food, score, isPaused, difficulty, gridSize.width, gridSize.height, updateGameStats]);
 
-  // Bad practice: Not cleaning up properly
   useEffect(() => {
-    // Bad practice: Adding event listener without cleanup
-    document.addEventListener("keydown", (e) => {
-      // Bad practice: Not using key constants
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === " ") {
+        setIsPaused((prev) => !prev);
+        return;
+      }
+
+      if (isPaused) return;
+
       switch (e.key) {
         case "ArrowUp":
-          direction = "UP";
+          if (direction !== "DOWN") direction = "UP";
           break;
         case "ArrowDown":
-          direction = "DOWN";
+          if (direction !== "UP") direction = "DOWN";
           break;
         case "ArrowLeft":
-          direction = "LEFT";
+          if (direction !== "RIGHT") direction = "LEFT";
           break;
         case "ArrowRight":
-          direction = "RIGHT";
+          if (direction !== "LEFT") direction = "RIGHT";
           break;
       }
-    });
+    };
 
-    // Bad practice: Setting interval without cleanup
+    document.addEventListener("keydown", handleKeyPress);
     intervalId = setInterval(moveSnake, speed);
-  }, [moveSnake]);
 
-  // Bad practice: Inline styles
+    return () => {
+      document.removeEventListener("keydown", handleKeyPress);
+      clearInterval(intervalId);
+    };
+  }, [moveSnake, isPaused]);
+
+  const restartGame = () => {
+    direction = "RIGHT";
+    speed = 100;
+    setSnake([{ x: 0, y: 0 }]);
+    setFood({ x: 5, y: 5 });
+    setScore(0);
+    setGameOver(false);
+    setIsPaused(false);
+  };
+
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "600px",
-        margin: "2rem auto",
-        padding: "1rem",
-        textAlign: "center",
-      }}
-    >
-      <h2>Unoptimized Snake Game</h2>
-      <p>Score: {score}</p>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${gridSize.width}, 20px)`,
-          gap: "1px",
-          background: "#ccc",
-          padding: "10px",
-          margin: "0 auto",
-        }}
-      >
-        {/* Bad practice: Unnecessary re-renders and inefficient rendering */}
+    <div className={`snake-game ${isDarkMode ? "dark" : ""}`}>
+      <div className="game-header">
+        <h2>Snake Game</h2>
+        <div className="game-controls">
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value as "easy" | "medium" | "hard")}
+            disabled={!gameOver}
+          >
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+          <button onClick={() => setIsPaused((p) => !p)} disabled={gameOver}>
+            {isPaused ? "Resume" : "Pause"}
+          </button>
+        </div>
+      </div>
+
+      <div className="game-stats">
+        <p>Score: {score}</p>
+        <p>High Score: {gameStats.highScore}</p>
+        <p>Games Played: {gameStats.gamesPlayed}</p>
+        <p>Average Score: {gameStats.averageScore}</p>
+      </div>
+
+      <div className="game-grid">
         {grid.map((row, y) =>
           row.map((_, x) => {
             const isSnake = snake.some((segment) => segment.x === x && segment.y === y);
             const isFood = food.x === x && food.y === y;
 
-            // Bad practice: Inline styles and unnecessary object creation
             return (
               <div
                 key={`${x}-${y}`}
-                style={{
-                  width: "20px",
-                  height: "20px",
-                  backgroundColor: isSnake ? "#4a6cf7" : isFood ? "#ff0000" : "#fff",
-                  border: "1px solid #eee",
-                }}
+                className={`grid-cell ${isSnake ? "snake" : ""} ${isFood ? "food" : ""}`}
               />
             );
           })
         )}
       </div>
+
       {gameOver && (
-        // Bad practice: Reloading page for restart
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            marginTop: "1rem",
-            padding: "0.5rem 1rem",
-            backgroundColor: "#4a6cf7",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-          }}
-        >
+        <button className="restart-button" onClick={restartGame}>
           Restart Game
         </button>
       )}
+
+      <div className="game-instructions">
+        <h3>How to Play</h3>
+        <p>Use arrow keys to control the snake</p>
+        <p>Space bar to pause/resume</p>
+        <p>Collect food to grow and score points</p>
+        <p>{difficulty === "hard" ? "Don't hit the walls!" : "Walls are passable"}</p>
+      </div>
     </div>
   );
 };
