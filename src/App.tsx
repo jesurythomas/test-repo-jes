@@ -3,6 +3,7 @@ import { Header } from "./components/Header";
 import { Hero } from "./components/Hero";
 import { Features } from "./components/Features";
 import { Footer } from "./components/Footer";
+import { SnakeGame } from "./components/SnakeGame";
 import "./App.css";
 
 function App() {
@@ -10,14 +11,12 @@ function App() {
 
   // Simulated authentication actions
   const handleLogin = async () => {
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoggedIn(true);
     alert("Successfully logged in!");
   };
 
   const handleLogout = async () => {
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoggedIn(false);
     alert("Successfully logged out!");
@@ -32,17 +31,13 @@ function App() {
       }
       return;
     }
-
-    // Simulate navigation or action
     alert("Welcome to your dashboard!");
   };
 
   // Simulated newsletter subscription
   const handleSubscribe = async (email: string) => {
-    // Simulate API call
     await new Promise((resolve, reject) => {
       setTimeout(() => {
-        // Simulate success/failure based on email format
         if (email.includes("@")) {
           resolve(true);
         } else {
@@ -56,6 +51,12 @@ function App() {
     <div className="landing-page">
       <Header isLoggedIn={isLoggedIn} onLogin={handleLogin} onLogout={handleLogout} />
       <Hero onGetStarted={handleGetStarted} />
+      <section className="game-section">
+        <div className="container">
+          <h2>Try Our Snake Game!</h2>
+          <SnakeGame />
+        </div>
+      </section>
       <Features />
       <Footer onSubscribe={handleSubscribe} />
     </div>

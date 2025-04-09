@@ -1,12 +1,12 @@
 import { useState } from "react";
 
 interface HeaderProps {
+  isLoggedIn: boolean;
   onLogin: () => void;
   onLogout: () => void;
-  isLoggedIn: boolean;
 }
 
-export const Header = ({ onLogin, onLogout, isLoggedIn }: HeaderProps) => {
+export const Header = ({ isLoggedIn, onLogin, onLogout }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -29,21 +29,15 @@ export const Header = ({ onLogin, onLogout, isLoggedIn }: HeaderProps) => {
               <a href="#features">Features</a>
             </li>
             <li>
-              <a href="#about">About</a>
+              <a href="#game">Game</a>
             </li>
             <li>
               <a href="#contact">Contact</a>
             </li>
             <li>
-              {isLoggedIn ? (
-                <button className="nav-button" onClick={onLogout}>
-                  Logout
-                </button>
-              ) : (
-                <button className="nav-button" onClick={onLogin}>
-                  Login
-                </button>
-              )}
+              <button className="nav-button" onClick={isLoggedIn ? onLogout : onLogin}>
+                {isLoggedIn ? "Logout" : "Login"}
+              </button>
             </li>
           </ul>
         </nav>
