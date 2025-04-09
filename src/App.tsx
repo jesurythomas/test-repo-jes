@@ -53,7 +53,7 @@ function App() {
       <Hero onGetStarted={handleGetStarted} />
       <section className="game-section">
         <div className="container">
-          <h2>Try Our Snake Game!</h2>
+          <h2>Try Our Snake Game! - Updated</h2>
           <SnakeGame />
         </div>
       </section>
