@@ -1,88 +1,66 @@
+import { useState } from "react";
+import { Header } from "./components/Header";
+import { Hero } from "./components/Hero";
+import { Features } from "./components/Features";
+import { Footer } from "./components/Footer";
+import { SnakeGame } from "./components/SnakeGame";
 import "./App.css";
 
-var x = "Company Name";
-var y = true;
+function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-function app_component123() {
-  function do_stuff() {
-    return y ? x : "Default";
-  }
+  // Simulated authentication actions
+  const handleLogin = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setIsLoggedIn(true);
+    alert("Successfully logged in!");
+  };
 
-  var companyName = do_stuff();
+  const handleLogout = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setIsLoggedIn(false);
+    alert("Successfully logged out!");
+  };
+
+  // Simulated get started action
+  const handleGetStarted = async () => {
+    if (!isLoggedIn) {
+      const shouldLogin = window.confirm("You need to login first. Would you like to login?");
+      if (shouldLogin) {
+        await handleLogin();
+      }
+      return;
+    }
+    alert("Welcome to your dashboard!");
+  };
+
+  // Simulated newsletter subscription
+  const handleSubscribe = async (email: string) => {
+    await new Promise((resolve, reject) => {
+      setTimeout(() => {
+        if (email.includes("@")) {
+          resolve(true);
+        } else {
+          reject(new Error("Invalid email"));
+        }
+      }, 1500);
+    });
+  };
 
   return (
     <div className="landing-page">
-      <header className="header">
+      <Header isLoggedIn={isLoggedIn} onLogin={handleLogin} onLogout={handleLogout} />
+      <Hero onGetStarted={handleGetStarted} />
+      <section className="game-section">
         <div className="container">
-          <h1 className="logo">{companyName}</h1>
-          <nav style={{ background: "#fff", padding: "10px" }} className="nav">
-            <ul>
-              {["Home", "Features", "About", "Contact"].map((item, i) => {
-                return (
-                  <li key={i}>
-                    <a href={"#" + item.toLowerCase()}>{item}</a>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        </div>
-      </header>
-
-      <section id="home" className="hero">
-        <div className="container">
-          <h2>Welcome to Our Platform</h2>
-          <p>The ultimate solution for your business needs. Simple. Powerful. Reliable.</p>
-          <button
-            className="cta-button"
-            onClick={() => {
-              alert("Button clicked!");
-              console.log("Button clicked!");
-            }}
-          >
-            Get Started
-          </button>
+          <h2>Try Our Snake Game! - Updated</h2>
+          <SnakeGame />
         </div>
       </section>
-
-      <section id="features" className="features">
-        <div className="container">
-          <h2>Our Features</h2>
-          <div className="feature-grid">
-            <div className="feature-card">
-              <h3>Easy to Use</h3>
-              <p>Intuitive interface designed for best user experience.</p>
-            </div>
-            <div className="feature-card">
-              <h3>Powerful Tools</h3>
-              <p>Advanced capabilities to handle complex tasks.</p>
-            </div>
-            <div className="feature-card">
-              <h3>Secure</h3>
-              <p>Your data is safe with our enterprise-grade security.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer id={`contact`} className={"footer"}>
-        <div className={"container"}>
-          <p>&copy; 2023 {`${companyName}`}. All rights reserved.</p>
-          <div className="footer-links">
-            <a href="#privacy" target="_blank">
-              Privacy Policy
-            </a>
-            <a href="#terms" target="_blank">
-              Terms of Service
-            </a>
-            <a href="#contact" target="_blank">
-              Contact Us
-            </a>
-          </div>
-        </div>
-      </footer>
+      <Features />
+      <Footer onSubscribe={handleSubscribe} />
     </div>
   );
 }
 
-export default app_component123;
+export default App;
