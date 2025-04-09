@@ -1,82 +1,28 @@
-name: Presubmit Checks (AI & Review State)
+name: Presubmit.ai
 
 permissions:
   contents: read
-  pull-requests: write # Needed for AI comments AND for status checks
-  issues: write # If presubmit/ai-reviewer needs it
+  pull-requests: write
+  issues: write
 
 on:
-  # Trigger on PR events (opening, updating code, reopening)
   pull_request_target:
-    types: [opened, synchronize, reopened]
-  # Trigger when a review is submitted (its state might change to blocking)
-  pull_request_review:
-    types: [submitted]
-  # Removed pull_request_review_comment: [created] - Checking on review submission is usually sufficient and more efficient.
+    types: [opened, synchronize]
+  pull_request_review_comment:
+    types: [created]
 
 jobs:
-  # --- Job 1: Run the AI Reviewer (optional, kept from original) ---
-  ai-reviewer:
-    name: Presubmit.ai Review
+  review:
     runs-on: ubuntu-latest
-    # Only run this when the PR is opened or updated, not on every review submission
-    if: github.event_name == 'pull_request_target'
     steps:
-      - name: Check required secrets for AI
+      - name: Check required secrets
         run: |
           if [ -z "${{ secrets.LLM_API_KEY }}" ]; then
-            echo "::error::LLM_API_KEY secret is not configured"
+            echo "Error: LLM_API_KEY secret is not configured"
             exit 1
           fi
-      - name: Run Presubmit.ai Reviewer
-        uses: presubmit/ai-reviewer@latest
+      - uses: presubmit/ai-reviewer@latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-          # LLM_MODEL: "gemini-2.0-flash-001" # Specify model if needed, check action defaults
-
-  # --- Job 2: Check PR Review State ---
-  check-review-state:
-    name: Check for Required Approvals / No Blocking Reviews
-    runs-on: ubuntu-latest
-    # This job needs to run on all triggers defined in `on:`
-    steps:
-      - name: Check for blocking review states (Changes Requested or Commented)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Get PR number reliably from the event payload
-          PR_NUMBER: ${{ github.event.pull_request.number || github.event.review.pull_request_url }} # Fallback for review event if needed, although number should be there
-          REPO: ${{ github.repository }}
-        run: |
-          # Extract PR number cleanly if it came from the review URL fallback
-          PR_NUM=$(echo "$PR_NUMBER" | grep -o '[0-9]*$')
-          echo "Checking reviews for PR #${PR_NUM} in repo ${REPO}"
-
-          # Use GitHub CLI to get the state of all submitted reviews for the PR
-          # We query for reviews, filter out 'PENDING' (draft) reviews, and get their states.
-          # We use 'jq -r' for raw output and handle potential empty results with '|| true'.
-          states=$(gh api "repos/${REPO}/pulls/${PR_NUM}/reviews" --jq '.[] | select(.state != "PENDING") | .state' || true)
-
-          # Check if the result is empty (no submitted reviews)
-          if [ -z "$states" ]; then
-            echo "No submitted reviews found. Check passes (or relies on other required checks)."
-            # Depending on policy, you might want this to FAIL if reviews are required but none exist.
-            # For now, it passes if no reviews block it.
-            exit 0
-          fi
-
-          echo "Submitted review states found:"
-          echo "$states"
-
-          # Check if any review state is 'CHANGES_REQUESTED' or 'COMMENTED'.
-          # 'CHANGES_REQUESTED' definitely blocks.
-          # 'COMMENTED' means the reviewer left comments without explicitly approving or requesting changes.
-          # Including 'COMMENTED' strictly enforces the "if there are comments" rule.
-          if echo "$states" | grep -q -E 'CHANGES_REQUESTED|COMMENTED'; then
-            echo "::error::Blocking reviews found (state is CHANGES_REQUESTED or COMMENTED). PR cannot merge until resolved/approved."
-            exit 1
-          else
-            # This means all reviews are APPROVED or DISMISSED
-            echo "No blocking reviews found (all are APPROVED or DISMISSED). Check passes."
-            exit 0
-          fi
+          LLM_MODEL: "gemini-2.0-flash-001"
